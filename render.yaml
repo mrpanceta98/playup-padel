@@ -12,6 +12,6 @@ services:
       - key: PLAYUP_HOST
         value: 0.0.0.0
       - key: PLAYUP_ALLOWED_ORIGINS
-        value: capacitor://localhost,ionic://localhost,https://app.playuppadel.com
+        value: capacitor://localhost,ionic://localhost,https://app.playuppadel.com,https://playup-padel-ob3c.onrender.com
       - key: PLAYUP_SECRET
         sync: false

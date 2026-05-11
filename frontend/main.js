@@ -2,6 +2,7 @@ const app = document.querySelector("#app");
 const tokenKey = "playup-token";
 const installedKey = "playup-installed";
 const apiBaseUrl = resolveApiBaseUrl();
+const maintenanceMode = resolveMaintenanceMode();
 
 let token = localStorage.getItem(tokenKey);
 let deferredInstallPrompt = null;
@@ -21,6 +22,8 @@ let state = {
   pwaInstalled: false,
   betaFeedbackOpen: false,
   betaFeedbackType: "feedback",
+  backendAwake: false,
+  backendWaking: false,
 };
 
 function resolveApiBaseUrl() {
@@ -30,6 +33,15 @@ function resolveApiBaseUrl() {
     localStorage.getItem("playup-api-base-url") ||
     "";
   return String(raw || "").replace(/\/+$/, "");
+}
+
+function resolveMaintenanceMode() {
+  const raw =
+    window.PLAYUP_CONFIG?.MAINTENANCE_MODE ??
+    document.querySelector("meta[name='playup-maintenance-mode']")?.content ??
+    localStorage.getItem("playup-maintenance-mode") ??
+    "false";
+  return ["1", "true", "yes", "on"].includes(String(raw).toLowerCase());
 }
 
 function apiUrl(path) {
@@ -125,20 +137,82 @@ function isIosSafari() {
 }
 
 async function api(path, options = {}) {
+  if (maintenanceMode && path !== "/api/error-logs") {
+    throw new Error("PlayUp Padel está en mantenimiento temporal. Volvemos en breve.");
+  }
+  if (path !== "/api/status") await ensureBackendReady();
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
   try {
-    const response = await fetch(apiUrl(path), { ...options, headers });
+    const method = (options.method || "GET").toUpperCase();
+    const response = await fetchWithWakeRetry(apiUrl(path), { ...options, method, headers }, { retry: method === "GET" });
     const contentType = response.headers.get("Content-Type") || "";
     const data = contentType.includes("application/json") ? await response.json() : { error: await response.text() };
     if (!response.ok || data.error) throw new Error(data.error || "Error de API");
     return data;
   } catch (error) {
-    if (error instanceof TypeError) {
-      throw new Error("No se puede conectar con el servidor de PlayUp Padel. Revisa tu conexión o inténtalo más tarde.");
+    if (error instanceof TypeError || error.name === "AbortError") {
+      throw new Error("No se puede conectar con el servidor de PlayUp Padel. Si Render Free estaba dormido, inténtalo de nuevo en unos segundos.");
     }
     throw error;
   }
+}
+
+async function ensureBackendReady() {
+  if (!apiBaseUrl || state.backendAwake) return;
+  showBackendWakeNotice("Conectando con PlayUp Padel...");
+  try {
+    await api("/api/status");
+    state.backendAwake = true;
+  } finally {
+    hideBackendWakeNotice();
+  }
+}
+
+async function fetchWithWakeRetry(url, options = {}, config = {}) {
+  const maxAttempts = config.retry ? 4 : 1;
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), attempt === 1 ? 12000 : 18000);
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      window.clearTimeout(timeout);
+      if ([502, 503, 504].includes(response.status) && attempt < maxAttempts) {
+        showBackendWakeNotice("Render está despertando el servidor...");
+        await sleep(2500 * attempt);
+        continue;
+      }
+      return response;
+    } catch (error) {
+      window.clearTimeout(timeout);
+      lastError = error;
+      if (attempt >= maxAttempts) break;
+      showBackendWakeNotice(error.name === "AbortError" ? "El servidor está arrancando..." : "Reintentando conexión...");
+      await sleep(2500 * attempt);
+    }
+  }
+  throw lastError || new TypeError("No se pudo conectar.");
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function showBackendWakeNotice(message) {
+  state.backendWaking = true;
+  let notice = document.querySelector(".server-wake-notice");
+  if (!notice) {
+    notice = document.createElement("div");
+    notice.className = "server-wake-notice";
+    document.body.appendChild(notice);
+  }
+  notice.innerHTML = `<strong>Conectando con el servidor</strong><span>${escapeHtml(message)} Si Render Free estaba dormido puede tardar unos segundos.</span>`;
+}
+
+function hideBackendWakeNotice() {
+  state.backendWaking = false;
+  document.querySelector(".server-wake-notice")?.remove();
 }
 
 function reportFrontendError(type, message, stackTrace = "") {
@@ -163,6 +237,10 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 async function boot() {
+  if (maintenanceMode) {
+    renderMaintenance();
+    return;
+  }
   if (location.pathname.startsWith("/invite/")) {
     await renderInvitationPage(location.pathname.split("/").pop());
     return;
@@ -181,6 +259,20 @@ async function boot() {
     token = null;
     renderAuth(error.message);
   }
+}
+
+function renderMaintenance() {
+  app.innerHTML = `
+    <main class="legal-page public-legal">
+      <section class="panel maintenance-panel">
+        <img class="standalone-logo" src="/assets/playup-logo.png" alt="PlayUp Padel" />
+        <span class="eyebrow">Mantenimiento</span>
+        <h1>PlayUp Padel está actualizándose</h1>
+        <p>Estamos preparando una mejora. Vuelve a intentarlo en unos minutos.</p>
+        <button class="btn" onclick="location.reload()">Reintentar</button>
+      </section>
+    </main>
+  `;
 }
 
 async function renderInvitationPage(inviteToken, error = "") {

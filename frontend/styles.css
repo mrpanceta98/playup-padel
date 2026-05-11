@@ -541,6 +541,28 @@ nav button.active {
   color: rgba(255, 255, 255, .72);
 }
 
+.server-wake-notice {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 210;
+  width: min(420px, calc(100vw - 28px));
+  display: grid;
+  gap: 4px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(199, 244, 100, .42);
+  border-radius: 8px;
+  padding: 14px;
+  background: #07111a;
+  color: #fff;
+  box-shadow: 0 20px 60px rgba(7, 17, 26, .34);
+}
+
+.server-wake-notice span {
+  color: rgba(255, 255, 255, .72);
+  font-size: 13px;
+}
+
 .ios-install-hint {
   margin: 14px 0 0;
   border: 1px solid #bfe6d9;
@@ -618,6 +640,16 @@ nav button.active {
 
 .support-card span {
   color: var(--muted);
+}
+
+.maintenance-panel {
+  width: min(560px, 100%);
+  padding: 28px;
+  text-align: center;
+}
+
+.maintenance-panel .standalone-logo {
+  margin-inline: auto;
 }
 
 .beta-badge {

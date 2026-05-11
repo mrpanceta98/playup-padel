@@ -86,6 +86,7 @@ DEFAULT_ALLOWED_ORIGINS = {
     "http://localhost:5173",
     "http://127.0.0.1:4173",
     "https://app.playuppadel.com",
+    "https://playup-padel-ob3c.onrender.com",
 }
 ALLOWED_ORIGINS = {
     origin.strip()

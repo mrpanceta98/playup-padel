@@ -1,0 +1,27 @@
+{
+  "name": "playup-padel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PlayUp Padel mobile wrapper for App Store and Google Play builds.",
+  "scripts": {
+    "mobile:prepare": "node scripts/build-mobile-web.js",
+    "mobile:prepare:prod": "PLAYUP_API_BASE_URL=https://playup-padel-ob3c.onrender.com npm run mobile:prepare",
+    "cap:add:android": "npm run mobile:prepare && npx cap add android",
+    "cap:add:ios": "npm run mobile:prepare && npx cap add ios",
+    "cap:sync": "npm run mobile:prepare && npx cap sync",
+    "android:open": "npm run cap:sync && npx cap open android",
+    "ios:open": "npm run cap:sync && npx cap open ios",
+    "android:build:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "android:build:aab": "npm run cap:sync && cd android && ./gradlew bundleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
+    "@capacitor/splash-screen": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.0",
+    "@capacitor/cli": "^7.0.0"
+  }
+}

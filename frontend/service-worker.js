@@ -1,4 +1,4 @@
-const CACHE_VERSION = "playup-pwa-v6";
+const CACHE_VERSION = "playup-pwa-v7";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
