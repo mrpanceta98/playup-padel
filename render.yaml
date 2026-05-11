@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: playup-padel-api
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python3 -m backend.server"
+    healthCheckPath: /api/status
+    envVars:
+      - key: PLAYUP_ENV
+        value: production
+      - key: PLAYUP_HOST
+        value: 0.0.0.0
+      - key: PLAYUP_ALLOWED_ORIGINS
+        value: capacitor://localhost,ionic://localhost,https://app.playuppadel.com
+      - key: PLAYUP_SECRET
+        sync: false
